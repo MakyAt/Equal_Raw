@@ -13,8 +13,8 @@ import shutil
 from time import sleep
 
 # Set your default preferences here:
-DEFAULT_PRIMARY_EXT = "jpg"
-DEFAULT_SECONDARY_EXT = "NEF"
+DEFAULT_JPG_EXT = "jpg"
+DEFAULT_RAW_EXT = "NEF"
 ISOLATION = "Isolation"
 DEFAULT_PRIMARY_DIR = "/Users/markus/ZZ_Ablage_ungesichert/FotoTest/toast"
 # Extensions to search for:
@@ -26,14 +26,16 @@ DEBUG = False
 
 def main() -> None:
     """Run main program."""
-    primary_dir, secondary_dir = get_dir_information()
+    primary_dir, secondary_dir, move_xmp = get_dir_information()
     if not create_iso_dir(primary_dir):
         sys.exit()
     print(f"Isolation directory created at... \n{primary_dir}/{ISOLATION}")
 
     primary_files = create_primary_file_list(primary_dir, JPG_EXTENTIONS)
+
     secondary_files = create_secondary_file_list(
-        secondary_dir, primary_files, RAW_EXTENSIONS)
+        secondary_dir, primary_files, RAW_EXTENSIONS, move_xmp)
+
     moved_counter, error_counter = move_files_to_isolation(
         primary_dir, secondary_dir, secondary_files)
 
@@ -48,14 +50,22 @@ def main() -> None:
 
 def get_dir_information() -> tuple:
     """Collect information on directorys to deal with."""
+    move_xmp = False
     primary_dir = input(
-        "Write or drop JPG directory: _") or DEFAULT_PRIMARY_DIR
+        "Type or drop PRIMARY directory:  ") or DEFAULT_PRIMARY_DIR
+    primary_dir = primary_dir.strip()
     secondary_format = input(
-        f"What is the RAW folder called: (Default {DEFAULT_PRIMARY_EXT})? _") or DEFAULT_PRIMARY_EXT
+        f"How is the SECONDARY folder called: (Default {DEFAULT_RAW_EXT})?  ") or DEFAULT_RAW_EXT
     secondary_dir = f"{primary_dir}/{secondary_format}"
     secondary_dir = input(
-        f"Is this the correct RAW directory: '{secondary_dir}'") or secondary_dir
-    return (primary_dir, secondary_dir)
+        "Is this the correct SECONDARY directory? Type new to use another:\n"
+        f"'{secondary_dir}'\n") or secondary_dir
+
+    xmp = input("Should we isolate the .xmp files too? y/N   ") or "no"
+    if xmp.lower() == "y":
+        move_xmp = True
+
+    return (primary_dir, secondary_dir, move_xmp)
 
 
 def create_iso_dir(dirpath) -> bool:
@@ -75,7 +85,7 @@ def create_iso_dir(dirpath) -> bool:
 def create_primary_file_list(file_dir, extensions) -> list:
     """Return the filenames to keep in secondary_dir without extension."""
     filenames = []
-    for file in os.listdir(file_dir):
+    for file in os.listdir(f"{file_dir}"):
         for ext in extensions:
             if file.find(ext) > 0:
                 filename = file.split(f".{ext}")[0]
@@ -83,24 +93,34 @@ def create_primary_file_list(file_dir, extensions) -> list:
     return filenames
 
 
-def create_secondary_file_list(secondary_dir, primary_files, extensions) -> list:
+def create_secondary_file_list(secondary_dir, primary_files, extensions, move_xmp) -> list:
     """Returns the list of files to move."""
-    print("Moving files...")
     files_to_move = []
+    if move_xmp:
+        xmps = ["XMP", "xmp"]
+        ext_to_search = extensions.copy()
+        ext_to_search.extend(xmps)
+        print(f"{ext_to_search=}")
+    else:
+        ext_to_search = extensions
     # Create list of all possible combination to find.
     files_to_search = []
     for file in primary_files:
-        for ext in extensions:
+        for ext in ext_to_search:
             files_to_search.append(f"{file}.{ext}")
     # Search for files to move.
-    for file in os.listdir(secondary_dir):
+    for file in os.listdir(f"{secondary_dir}"):
         if file not in files_to_search:
             files_to_move.append(file)
+    if DEBUG:
+        print(f"{files_to_search=}")
+        print(f"{files_to_move=}")
     return files_to_move
 
 
 def move_files_to_isolation(primary_dir, secondary_dir, secondary_files) -> tuple:
     """Move the files."""
+    print("Moving files...")
     iso_dir = f"{primary_dir}/{ISOLATION}"
     moved_counter = 0
     error_counter = 0
@@ -130,7 +150,7 @@ def deletion(moved_counter, primary_dir) -> None:
                        f"files in {ISOLATION}?\n"
                        "WARNING: This cannot be undone!!!\n\n"
                        "Type 'yes' to move on.\n"
-                       "Every other input to abort. (Default no)_") or "no"
+                       "Every other input to abort. (Default no)  ") or "no"
 
         if delete == "yes":
             try:
@@ -143,6 +163,7 @@ def deletion(moved_counter, primary_dir) -> None:
                 print("\n\nCtrl-C detected. Deletion aborted...\n")
                 sys.exit()
         else:
+            print("File deletion aborted. Exiting...")
             sys.exit()
 
 
