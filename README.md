@@ -2,6 +2,9 @@
 
 This program is used to equalize two photo directorys.  
 f.ex. you have a collection of jpg photos and you only want to keep the same raw's.
+  
+**CAVE:** At the moment it not working with spaces in directory names.  
+Will be fixed soon.
 
 ## Required
 
