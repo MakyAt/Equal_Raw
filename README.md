@@ -25,3 +25,5 @@ You can use it or change it as you like...BUT...
   
 I'm **NOT** responsible for **ANY data loss or damage** on your system.  
 You should always have a backup of your data.
+
+Added Synci Test
